@@ -1,12 +1,26 @@
 "use client";
 import React from "react";
 import { FileText, Users, Edit3, ArrowLeft } from "lucide-react";
-import { GoogleLogin } from "@react-oauth/google";
+import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/Providers/AuthProvider";
 import axios from "axios";
 
 function SignIn() {
   const router = useRouter();
+  const { login } = useAuth();
+  const handleLogin = async (credentialResponse: CredentialResponse) => {
+    const token = credentialResponse.credential;
+    if (token) {
+      const res = await axios.post("http://localhost:8000/api/user/login", {
+        token,
+      });
+      if (res.status === 200) {
+        login(res.data.token);
+        router.push("/dashboard");
+      }
+    }
+  };
   return (
     <div className="min-h-screen bg-white flex">
       {/* Left Section - Content */}
@@ -105,21 +119,7 @@ function SignIn() {
           </div>
 
           {/* Google Sign In Button */}
-          <GoogleLogin
-            onSuccess={async (credentialResponse) => {
-              const token = credentialResponse.credential;
-              if (token) {
-                const res = await axios.post(
-                  "http://localhost:8000/api/user/login",
-                  { token }
-                );
-                if (res.status === 200) {
-                  localStorage.setItem("token", res.data.token);
-                  router.push("/dashboard");
-                }
-              }
-            }}
-          ></GoogleLogin>
+          <GoogleLogin onSuccess={handleLogin}></GoogleLogin>
 
           {/* Divider */}
           <div className="relative my-8">

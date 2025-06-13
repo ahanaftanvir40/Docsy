@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { Request, Response } from "express";
 import { verifyGoogleToken } from "../../utils/verify-token";
 import User from "../../models/user";
+import { AuthenticatedRequest } from "../../types";
 
 export const LoginHandler = async (req: Request, res: Response) => {
   try {
@@ -34,6 +35,13 @@ export const LoginHandler = async (req: Request, res: Response) => {
       { expiresIn: "7d" }
     );
 
+    res.cookie("token", jwtToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+    });
+
+    //remove token in production
     res.status(200).json({
       message: "Login successful",
       token: jwtToken,
@@ -43,5 +51,23 @@ export const LoginHandler = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({ message: "Authentication Failed" });
     return;
+  }
+};
+
+export const MeHandler = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const user = await User.findById(req.user?.userId);
+
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    res.status(200).json({
+      message: "User data retrieved successfully",
+      data: user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error retrieving user data" });
   }
 };

@@ -72,14 +72,27 @@ exports.GetHandler = GetHandler;
 const GetAllHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
-        const user = yield user_1.default.findById((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId).populate("documents");
+        const user = yield user_1.default.findById((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)
+            .populate("documents")
+            .populate({
+            path: "sharedDocuments.document",
+            model: "Document",
+            populate: {
+                path: "authorId",
+                model: "User",
+                select: "fullname email",
+            },
+        });
         if (!user) {
             res.status(404).json({ message: "User not found" });
             return;
         }
         res.status(200).json({
             message: "All documents retrieved successfully",
-            data: user.documents,
+            data: {
+                documents: user.documents,
+                sharedDocuments: user.sharedDocuments,
+            },
         });
         return;
     }

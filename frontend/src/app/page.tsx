@@ -1,11 +1,8 @@
-import React from "react";
 import { FileText, Users, Share2, Zap, ArrowRight, Edit3 } from "lucide-react";
 
 function Home() {
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">

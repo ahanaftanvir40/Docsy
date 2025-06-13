@@ -34,6 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
+const document_1 = require("../document");
 const userSchema = new mongoose_1.Schema({
     fullname: {
         type: String,
@@ -58,6 +59,7 @@ const userSchema = new mongoose_1.Schema({
             ref: "Document",
         },
     ],
+    sharedDocuments: [document_1.sharedDocumentSchema],
     createdAt: {
         type: Date,
         default: Date.now,

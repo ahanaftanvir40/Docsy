@@ -33,17 +33,34 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.sharedDocumentSchema = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
+exports.sharedDocumentSchema = new mongoose_1.Schema({
+    authorId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "User",
+    },
+    document: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "Document",
+        required: true,
+    },
+    role: {
+        type: String,
+        enum: ["viewer", "editor"],
+        required: true,
+    },
+});
 const documentSchema = new mongoose_1.Schema({
     userId: {
         type: mongoose_1.Schema.Types.ObjectId,
-        ref: "User", // Reference to the User model
+        ref: "User",
     },
     title: {
         type: String,
         required: true,
     },
-    text: {
+    content: {
         type: String,
         required: true,
     },

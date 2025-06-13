@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LoginHandler = void 0;
+exports.MeHandler = exports.LoginHandler = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const verify_token_1 = require("../../utils/verify-token");
 const user_1 = __importDefault(require("../../models/user"));
@@ -37,6 +37,12 @@ const LoginHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             userId: user._id,
             email: user.email,
         }, process.env.JWT_SECRET, { expiresIn: "7d" });
+        res.cookie("token", jwtToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "strict",
+        });
+        //remove token in production
         res.status(200).json({
             message: "Login successful",
             token: jwtToken,
@@ -50,3 +56,21 @@ const LoginHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.LoginHandler = LoginHandler;
+const MeHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const user = yield user_1.default.findById((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId);
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        res.status(200).json({
+            message: "User data retrieved successfully",
+            data: user,
+        });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Error retrieving user data" });
+    }
+});
+exports.MeHandler = MeHandler;

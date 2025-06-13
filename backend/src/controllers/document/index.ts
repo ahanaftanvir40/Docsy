@@ -67,7 +67,18 @@ export const GetAllHandler = async (
   res: Response
 ) => {
   try {
-    const user = await User.findById(req.user?.userId).populate("documents");
+    const user = await User.findById(req.user?.userId)
+      .populate("documents")
+      .populate({
+        path: "sharedDocuments.document",
+        model: "Document",
+        populate: {
+          path: "authorId",
+          model: "User",
+          select: "fullname email",
+        },
+      });
+
     if (!user) {
       res.status(404).json({ message: "User not found" });
       return;
@@ -75,7 +86,10 @@ export const GetAllHandler = async (
 
     res.status(200).json({
       message: "All documents retrieved successfully",
-      data: user.documents,
+      data: {
+        documents: user.documents,
+        sharedDocuments: user.sharedDocuments,
+      },
     });
     return;
   } catch (error) {

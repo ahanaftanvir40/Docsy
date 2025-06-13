@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { sharedDocumentSchema, ISharedDocument } from "../document";
 
 export interface IUser {
   _id?: mongoose.Types.ObjectId;
@@ -7,6 +8,7 @@ export interface IUser {
   avatar: string;
   email: string;
   documents: mongoose.Types.ObjectId[];
+  sharedDocuments: ISharedDocument[];
   createdAt: Date;
 }
 
@@ -34,6 +36,7 @@ const userSchema = new Schema<IUser>({
       ref: "Document",
     },
   ],
+  sharedDocuments: [sharedDocumentSchema],
   createdAt: {
     type: Date,
     default: Date.now,
