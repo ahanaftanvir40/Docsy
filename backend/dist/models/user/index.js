@@ -40,10 +40,6 @@ const userSchema = new mongoose_1.Schema({
         type: String,
         required: true,
     },
-    role: {
-        type: String,
-        enum: ["viewer", "editor"],
-    },
     avatar: {
         type: String,
         default: "https://example.com/default-avatar.png",

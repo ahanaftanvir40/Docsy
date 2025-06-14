@@ -28,6 +28,7 @@ export const sharedDocumentSchema = new Schema<ISharedDocument>({
   role: {
     type: String,
     enum: ["viewer", "editor"],
+    default: "viewer",
     required: true,
   },
 });

@@ -57,6 +57,7 @@ export async function getDocuments() {
       Authorization: `Bearer ${token}`,
     },
   });
+  console.log("Fetched documents:", response.data);
 
   return response.data;
 }
@@ -69,6 +70,29 @@ export async function getDocumentById(id: string) {
       Authorization: `Bearer ${token}`,
     },
   });
+
+  return response.data;
+}
+
+export async function shareDocument(
+  email: string,
+  documentId: string,
+  role: "viewer" | "editor"
+) {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${BASE_URL}/document/share/${documentId}`,
+    {
+      userEmail: email,
+      role,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 
   return response.data;
 }

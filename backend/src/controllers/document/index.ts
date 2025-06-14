@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import Document from "../../models/document";
 import { AuthenticatedRequest } from "../../types";
 import User from "../../models/user";
+import mongoose from "mongoose";
 
 export const CreateHandler = async (
   req: AuthenticatedRequest,
@@ -129,15 +130,8 @@ export const GetAllHandler = async (
   try {
     const user = await User.findById(req.user?.userId)
       .populate("documents")
-      .populate({
-        path: "sharedDocuments.document",
-        model: "Document",
-        populate: {
-          path: "authorId",
-          model: "User",
-          select: "fullname email",
-        },
-      });
+      .populate("sharedDocuments.document")
+      .populate("sharedDocuments.authorId", "fullname email");
 
     if (!user) {
       res.status(404).json({ message: "User not found" });
@@ -153,7 +147,82 @@ export const GetAllHandler = async (
     });
     return;
   } catch (error) {
+    console.log("Get all documents error:", error);
+
     res.status(500).json({ message: "Error retrieving documents" });
+    return;
+  }
+};
+
+export const ShareHandler = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const { userEmail, role } = req.body;
+
+    if (!id || !userEmail) {
+      res
+        .status(400)
+        .json({ message: "Document ID and User Email are required" });
+      return;
+    }
+
+    const document = await Document.findById(id);
+    if (!document) {
+      res.status(404).json({ message: "Document not found" });
+      return;
+    }
+
+    if (document.userId.toString() !== req.user?.userId) {
+      res
+        .status(403)
+        .json({ message: "You don't have permission to share this document" });
+      return;
+    }
+
+    const targetUser = await User.findOne({ email: userEmail });
+    if (!targetUser) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    const isAlreadyShared = targetUser.sharedDocuments.some(
+      (shared) => shared.document.toString() === id
+    );
+
+    if (isAlreadyShared) {
+      res
+        .status(400)
+        .json({ message: "Document is already shared with this user" });
+      return;
+    }
+
+    targetUser.sharedDocuments.push({
+      document: new mongoose.Types.ObjectId(id),
+      authorId: new mongoose.Types.ObjectId(req.user?.userId),
+      role: role,
+    });
+
+    await targetUser.save();
+
+    res.status(200).json({
+      message: `Document "${document.title}" shared with ${targetUser.fullname} successfully`,
+      data: {
+        document,
+        sharedWith: {
+          userId: targetUser._id,
+          fullname: targetUser.fullname,
+          email: targetUser.email,
+          role: role,
+        },
+      },
+    });
+    return;
+  } catch (error) {
+    console.error("Share document error:", error);
+    res.status(500).json({ message: "Error sharing document" });
     return;
   }
 };

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { io, Socket } from "socket.io-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDocumentById, updateDocument } from "@/lib/api";
 import { useParams, useRouter } from "next/navigation";
@@ -12,6 +13,8 @@ import {
   Check,
   AlertCircle,
 } from "lucide-react";
+import ShareModal from "@/components/ShareModal";
+import { useAuth } from "@/Providers/AuthProvider";
 
 interface IDocument {
   _id: string;
@@ -27,13 +30,20 @@ function SingleDoc() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const id = params.id as string;
+  const { user } = useAuth();
   const editorRef = useRef<any>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const [connectedUsers, setConnectedUsers] = useState<string[]>([]);
 
   const [title, setTitle] = useState("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<IDocument | null>(
+    null
+  );
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["document", id],
@@ -78,33 +88,30 @@ function SingleDoc() {
     }
   }, [data?.data?._id]);
 
-  // Improved auto-save with debouncing and cursor preservation
   useEffect(() => {
     if (!hasUnsavedChanges || !data?.data) return;
 
-    // Clear existing timer
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
 
-    // Set new timer
     autoSaveTimerRef.current = setTimeout(() => {
       handleAutoSaveWithCursorPreservation();
-    }, 3000); 
+    }, 3000);
 
     return () => {
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [title, hasUnsavedChanges, data?.data]); // Added title to dependencies
+  }, [title, hasUnsavedChanges, data?.data]);
 
   const handleAutoSaveWithCursorPreservation = () => {
     if (title.trim() && editorRef.current && !updateMutation.isPending) {
       const editor = editorRef.current;
       const bookmark = editor.selection.getBookmark(2, true);
 
-      const content = editor.getContent();
+      const content = editor.getContent({ format: "text" });
       updateMutation.mutate(
         { title: title.trim(), content },
         {
@@ -129,13 +136,12 @@ function SingleDoc() {
     }
   };
 
-
   const handleSaveWithCursorPreservation = () => {
     if (title.trim() && editorRef.current) {
       const editor = editorRef.current;
       const bookmark = editor.selection.getBookmark(2, true);
 
-      const content = editor.getContent();
+      const content = editor.getContent({ format: "text" });
       updateMutation.mutate(
         { title: title.trim(), content },
         {
@@ -166,7 +172,6 @@ function SingleDoc() {
       clearTimeout(autoSaveTimerRef.current);
     }
 
-    
     handleSaveWithCursorPreservation();
   };
 
@@ -175,10 +180,8 @@ function SingleDoc() {
     setHasUnsavedChanges(true);
   };
 
-  
   const handleTitleBlur = () => {
     if (hasUnsavedChanges && title.trim()) {
-      // Clear auto-save timer and save immediately
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
       }
@@ -189,6 +192,33 @@ function SingleDoc() {
   const handleEditorChange = (content: string) => {
     setHasUnsavedChanges(true);
   };
+  const handlerShare = () => {
+    if (id) {
+      setSelectedDocument(data.data);
+      setShareModalOpen(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!id || !user?._id) return;
+
+    const socket = io(
+      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:8000"
+    );
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      socket.emit("join", id, user._id);
+    });
+
+    socket.on("connectedUsers", (users: string[]) => {
+      setConnectedUsers(users);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [id, user?._id]);
 
   if (isLoading) {
     return (
@@ -297,9 +327,29 @@ function SingleDoc() {
                 <span>Save</span>
               </button>
 
-              <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+              <button
+                onClick={handlerShare}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
                 <Share2 className="w-5 h-5 text-gray-600" />
               </button>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">
+                  {connectedUsers.length} user
+                  {connectedUsers.length !== 1 ? "s" : ""} online
+                </span>
+                <div className="flex -space-x-2">
+                  {connectedUsers.map((userId, idx) => (
+                    <div
+                      key={userId}
+                      className="w-6 h-6 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center text-xs text-white font-medium"
+                      title={`User ${userId}`}
+                    >
+                      {idx + 1}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -364,6 +414,15 @@ function SingleDoc() {
           </div>
         </div>
       </div>
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => {
+          setShareModalOpen(false);
+          setSelectedDocument(null);
+        }}
+        documentId={selectedDocument?._id || ""}
+        documentTitle={selectedDocument?.title || ""}
+      />
     </div>
   );
 }

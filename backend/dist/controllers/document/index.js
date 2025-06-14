@@ -12,9 +12,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GetAllHandler = exports.GetHandler = exports.DeleteHandler = exports.UpdateHandler = exports.CreateHandler = void 0;
+exports.ShareHandler = exports.GetAllHandler = exports.GetHandler = exports.DeleteHandler = exports.UpdateHandler = exports.CreateHandler = void 0;
 const document_1 = __importDefault(require("../../models/document"));
 const user_1 = __importDefault(require("../../models/user"));
+const mongoose_1 = __importDefault(require("mongoose"));
 const CreateHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     try {
@@ -120,15 +121,8 @@ const GetAllHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     try {
         const user = yield user_1.default.findById((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)
             .populate("documents")
-            .populate({
-            path: "sharedDocuments.document",
-            model: "Document",
-            populate: {
-                path: "authorId",
-                model: "User",
-                select: "fullname email",
-            },
-        });
+            .populate("sharedDocuments.document")
+            .populate("sharedDocuments.authorId", "fullname email");
         if (!user) {
             res.status(404).json({ message: "User not found" });
             return;
@@ -143,8 +137,70 @@ const GetAllHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         return;
     }
     catch (error) {
+        console.log("Get all documents error:", error);
         res.status(500).json({ message: "Error retrieving documents" });
         return;
     }
 });
 exports.GetAllHandler = GetAllHandler;
+const ShareHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    try {
+        const { id } = req.params;
+        const { userEmail, role } = req.body;
+        if (!id || !userEmail) {
+            res
+                .status(400)
+                .json({ message: "Document ID and User Email are required" });
+            return;
+        }
+        const document = yield document_1.default.findById(id);
+        if (!document) {
+            res.status(404).json({ message: "Document not found" });
+            return;
+        }
+        if (document.userId.toString() !== ((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            res
+                .status(403)
+                .json({ message: "You don't have permission to share this document" });
+            return;
+        }
+        const targetUser = yield user_1.default.findOne({ email: userEmail });
+        if (!targetUser) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        const isAlreadyShared = targetUser.sharedDocuments.some((shared) => shared.document.toString() === id);
+        if (isAlreadyShared) {
+            res
+                .status(400)
+                .json({ message: "Document is already shared with this user" });
+            return;
+        }
+        targetUser.sharedDocuments.push({
+            document: new mongoose_1.default.Types.ObjectId(id),
+            authorId: new mongoose_1.default.Types.ObjectId((_b = req.user) === null || _b === void 0 ? void 0 : _b.userId),
+            role: role,
+        });
+        yield targetUser.save();
+        res.status(200).json({
+            message: `Document "${document.title}" shared with ${targetUser.fullname} successfully`,
+            data: {
+                document,
+                sharedWith: {
+                    userId: targetUser._id,
+                    fullname: targetUser.fullname,
+                    email: targetUser.email,
+                    role: role,
+                },
+            },
+        });
+        return;
+    }
+    catch (error) {
+        console.error("Share document error:", error);
+        res.status(500).json({ message: "Error sharing document" });
+        return;
+    }
+});
+exports.ShareHandler = ShareHandler;

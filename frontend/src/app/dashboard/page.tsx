@@ -1,35 +1,27 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { useSearch } from "@/Providers/SearchProvider";
-import {
-  QueryClient,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteDocument } from "@/lib/api";
 
 import {
   FileText,
-  Plus,
   Filter,
   MoreVertical,
   Share2,
-  Users,
   Clock,
-  Star,
   Grid3X3,
   List,
   Edit3,
   Trash2,
-  Copy,
   Download,
-  Eye,
   Loader2,
 } from "lucide-react";
 import { getDocuments } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import NewButton from "@/components/NewButton";
+import ShareModal from "@/components/ShareModal";
+import { useAuth } from "@/Providers/AuthProvider";
 
 interface IDocument {
   _id: string;
@@ -51,11 +43,18 @@ function Dashboard() {
     "my-docs"
   );
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<IDocument | null>(
+    null
+  );
   const { searchQuery } = useSearch();
   const [showDropdown, setShowDropdown] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+
+  console.log("User in Dashboard:", user);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["documents"],
@@ -101,7 +100,6 @@ function Dashboard() {
     setShowDropdown(null);
 
     switch (action) {
-      case "open":
       case "edit":
         router.push(`/document/${docId}`);
         break;
@@ -109,7 +107,11 @@ function Dashboard() {
         handleDelete(docId);
         break;
       case "share":
-        console.log(`Sharing document: ${docId}`);
+        const docToShare = myDocs.find((doc) => doc._id === docId);
+        if (docToShare) {
+          setSelectedDocument(docToShare);
+          setShareModalOpen(true);
+        }
         break;
       case "duplicate":
         console.log(`Duplicating document: ${docId}`);
@@ -163,7 +165,6 @@ function Dashboard() {
   const sharedDocs: ISharedDocument[] = data?.data.sharedDocuments || [];
   const currentDocs = activeTab === "my-docs" ? myDocs : sharedDocs;
 
-  // Filter documents based on search query
   const filteredDocs = currentDocs.filter((item) => {
     if (activeTab === "my-docs") {
       const doc = item as IDocument;
@@ -192,13 +193,6 @@ function Dashboard() {
       >
         <div className="py-2">
           <button
-            onClick={() => handleDocumentAction("open", doc._id)}
-            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-          >
-            <Eye className="w-4 h-4" />
-            <span>Open</span>
-          </button>
-          <button
             onClick={() => handleDocumentAction("edit", doc._id)}
             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
           >
@@ -212,13 +206,7 @@ function Dashboard() {
             <Share2 className="w-4 h-4" />
             <span>Share</span>
           </button>
-          <button
-            onClick={() => handleDocumentAction("duplicate", doc._id)}
-            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-          >
-            <Copy className="w-4 h-4" />
-            <span>Duplicate</span>
-          </button>
+
           <button
             onClick={() => handleDocumentAction("download", doc._id)}
             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
@@ -501,6 +489,15 @@ function Dashboard() {
           </div>
         )}
       </div>
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => {
+          setShareModalOpen(false);
+          setSelectedDocument(null);
+        }}
+        documentId={selectedDocument?._id || ""}
+        documentTitle={selectedDocument?.title || ""}
+      />
     </div>
   );
 }

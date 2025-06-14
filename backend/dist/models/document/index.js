@@ -48,6 +48,7 @@ exports.sharedDocumentSchema = new mongoose_1.Schema({
     role: {
         type: String,
         enum: ["viewer", "editor"],
+        default: "viewer",
         required: true,
     },
 });

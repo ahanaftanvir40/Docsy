@@ -4,7 +4,6 @@ import { sharedDocumentSchema, ISharedDocument } from "../document";
 export interface IUser {
   _id?: mongoose.Types.ObjectId;
   fullname: string;
-  role: "viewer" | "editor";
   avatar: string;
   email: string;
   documents: mongoose.Types.ObjectId[];
@@ -16,10 +15,6 @@ const userSchema = new Schema<IUser>({
   fullname: {
     type: String,
     required: true,
-  },
-  role: {
-    type: String,
-    enum: ["viewer", "editor"],
   },
   avatar: {
     type: String,
