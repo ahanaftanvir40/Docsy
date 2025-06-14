@@ -39,11 +39,11 @@ const documentSchema = new Schema<IDocument>({
   },
   title: {
     type: String,
-    required: true,
+    default: "Untitled Document",
   },
   content: {
     type: String,
-    required: true,
+    default: "",
   },
   createdAt: {
     type: Date,

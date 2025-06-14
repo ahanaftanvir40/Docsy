@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/Providers/AuthProvider";
 import { useSearch } from "@/Providers/SearchProvider";
 import Image from "next/image";
+import NewButton from "./NewButton";
 
 function Header() {
   const pathname = usePathname();
@@ -21,7 +22,7 @@ function Header() {
 
   if (isAuthenticated) {
     return (
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -37,21 +38,19 @@ function Header() {
             </div>
 
             <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search documents..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 outline-none border text-gray-700 border-gray-200 rounded-lg  w-64"
-                />
-              </div>
-
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-blue-600/25 flex items-center space-x-2">
-                <Plus className="w-4 h-4" />
-                <span>New Document</span>
-              </button>
+              {!pathname.startsWith("/document") && (
+                <div className="relative">
+                  <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search documents..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 pr-4 py-2 outline-none border text-gray-700 border-gray-200 rounded-lg  w-64"
+                  />
+                </div>
+              )}
+              {!pathname.startsWith("/document") && <NewButton />}
 
               {/* User Menu */}
               <div className="relative">

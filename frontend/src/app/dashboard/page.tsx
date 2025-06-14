@@ -1,8 +1,13 @@
 "use client";
-import React, { useState } from "react";
-import { useAuth } from "@/Providers/AuthProvider";
+import React, { useState, useRef, useEffect } from "react";
 import { useSearch } from "@/Providers/SearchProvider";
-import { useQuery } from "@tanstack/react-query";
+import {
+  QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { deleteDocument } from "@/lib/api";
 
 import {
   FileText,
@@ -23,7 +28,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { getDocuments } from "@/lib/api";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import NewButton from "@/components/NewButton";
 
 interface IDocument {
   _id: string;
@@ -47,14 +53,76 @@ function Dashboard() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const { searchQuery } = useSearch();
   const [showDropdown, setShowDropdown] = useState<string | null>(null);
-  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["documents"],
     queryFn: getDocuments,
   });
 
-  console.log("Documents Data:", data);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteDocument(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["documents"],
+      });
+    },
+    onError: (error) => {
+      console.error("Error deleting document:", error);
+    },
+  });
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(null);
+      }
+    }
+
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [showDropdown]);
+
+  const handleDelete = (docId: string) => {
+    deleteMutation.mutate(docId);
+    setShowDropdown(null);
+  };
+
+  const handleDocumentAction = (action: string, docId: string) => {
+    setShowDropdown(null);
+
+    switch (action) {
+      case "open":
+      case "edit":
+        router.push(`/document/${docId}`);
+        break;
+      case "delete":
+        handleDelete(docId);
+        break;
+      case "share":
+        console.log(`Sharing document: ${docId}`);
+        break;
+      case "duplicate":
+        console.log(`Duplicating document: ${docId}`);
+        break;
+      case "download":
+        console.log(`Downloading document: ${docId}`);
+        break;
+    }
+  };
+
+  const handleCardClick = (docId: string) => {
+    router.push(`/document/${docId}`);
+  };
 
   if (isLoading) {
     return (
@@ -93,9 +161,7 @@ function Dashboard() {
 
   const myDocs: IDocument[] = data?.data.documents || [];
   const sharedDocs: ISharedDocument[] = data?.data.sharedDocuments || [];
-  // Get current documents based on active tab
   const currentDocs = activeTab === "my-docs" ? myDocs : sharedDocs;
-  console.log("Current Documents:", currentDocs);
 
   // Filter documents based on search query
   const filteredDocs = currentDocs.filter((item) => {
@@ -110,11 +176,72 @@ function Dashboard() {
     }
   });
 
-  console.log("Filtered Documents:", filteredDocs);
+  const DropdownMenu = ({
+    doc,
+    isVisible,
+  }: {
+    doc: IDocument;
+    isVisible: boolean;
+  }) => {
+    if (!isVisible) return null;
 
-  const handleDocumentAction = (action: string, docId: string) => {
-    console.log(`${action} document ${docId}`);
-    setShowDropdown(null);
+    return (
+      <div
+        ref={dropdownRef}
+        className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+      >
+        <div className="py-2">
+          <button
+            onClick={() => handleDocumentAction("open", doc._id)}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+          >
+            <Eye className="w-4 h-4" />
+            <span>Open</span>
+          </button>
+          <button
+            onClick={() => handleDocumentAction("edit", doc._id)}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+          >
+            <Edit3 className="w-4 h-4" />
+            <span>Edit</span>
+          </button>
+          <button
+            onClick={() => handleDocumentAction("share", doc._id)}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+          >
+            <Share2 className="w-4 h-4" />
+            <span>Share</span>
+          </button>
+          <button
+            onClick={() => handleDocumentAction("duplicate", doc._id)}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+          >
+            <Copy className="w-4 h-4" />
+            <span>Duplicate</span>
+          </button>
+          <button
+            onClick={() => handleDocumentAction("download", doc._id)}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+          >
+            <Download className="w-4 h-4" />
+            <span>Download</span>
+          </button>
+          <hr className="my-2" />
+          <button
+            onClick={() => handleDocumentAction("delete", doc._id)}
+            disabled={deleteMutation.isPending}
+            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 flex items-center space-x-2"
+          >
+            {deleteMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+            <span>{deleteMutation.isPending ? "Deleting..." : "Delete"}</span>
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const DocumentCard = ({
@@ -124,97 +251,51 @@ function Dashboard() {
     doc: IDocument;
     isShared?: boolean;
   }) => (
-    <Link href={`/document/${doc._id}`}>
-      <div className="group bg-white border border-gray-200 rounded-xl hover:border-blue-200 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
-        <div className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-blue-600" />
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
-                  {doc.title}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  {isShared ? "Shared" : "You"} •{" "}
-                  {new Date(
-                    doc.updatedAt || doc.createdAt
-                  ).toLocaleDateString()}
-                </p>
-              </div>
+    <div className="group bg-white border border-gray-200 rounded-xl hover:border-blue-200 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
+      <div className="p-6">
+        {/* Header with actions */}
+        <div className="flex items-start justify-between mb-4">
+          <div
+            className="flex items-center space-x-3 flex-1 cursor-pointer"
+            onClick={() => handleCardClick(doc._id)}
+          >
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 text-blue-600" />
             </div>
-            <div className="flex items-center space-x-2">
-              {isShared && <Share2 className="w-4 h-4 text-blue-500" />}
-              <div className="relative">
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowDropdown(showDropdown === doc._id ? null : doc._id);
-                  }}
-                  className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <MoreVertical className="w-4 h-4 text-gray-400" />
-                </button>
-                {showDropdown === doc._id && (
-                  <div className="absolute right-0 top-8 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                    <div className="py-2">
-                      <button
-                        onClick={() => handleDocumentAction("open", doc._id)}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        <span>Open</span>
-                      </button>
-                      <button
-                        onClick={() => handleDocumentAction("edit", doc._id)}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleDocumentAction("share", doc._id)}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                      >
-                        <Share2 className="w-4 h-4" />
-                        <span>Share</span>
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleDocumentAction("duplicate", doc._id)
-                        }
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                      >
-                        <Copy className="w-4 h-4" />
-                        <span>Duplicate</span>
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleDocumentAction("download", doc._id)
-                        }
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>Download</span>
-                      </button>
-                      <hr className="my-2" />
-                      <button
-                        onClick={() => handleDocumentAction("delete", doc._id)}
-                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                {doc.title}
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {isShared ? "Shared" : "You"} •{" "}
+                {new Date(doc.updatedAt || doc.createdAt).toLocaleDateString()}
+              </p>
             </div>
           </div>
 
+          {/* Actions */}
+          <div className="flex items-center space-x-2 ml-2">
+            {isShared && <Share2 className="w-4 h-4 text-blue-500" />}
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDropdown(showDropdown === doc._id ? null : doc._id);
+                }}
+                className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <MoreVertical className="w-4 h-4 text-gray-400" />
+              </button>
+              <DropdownMenu doc={doc} isVisible={showDropdown === doc._id} />
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div
+          className="cursor-pointer"
+          onClick={() => handleCardClick(doc._id)}
+        >
           <p className="text-sm text-gray-600 mb-4 line-clamp-2">
             {doc.content ? doc.content.slice(0, 100) + "..." : "No content"}
           </p>
@@ -234,7 +315,7 @@ function Dashboard() {
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 
   const DocumentListItem = ({
@@ -246,92 +327,51 @@ function Dashboard() {
   }) => (
     <div className="group bg-white border border-gray-200 rounded-lg hover:border-blue-200 hover:shadow-md transition-all duration-200">
       <div className="p-4 flex items-center space-x-4">
-        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-          <FileText className="w-4 h-4 text-blue-600" />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2">
-            <h3 className="font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
-              {doc.title}
-            </h3>
-            {isShared && (
-              <Share2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
-            )}
+        <div
+          className="flex items-center space-x-4 flex-1 cursor-pointer"
+          onClick={() => handleCardClick(doc._id)}
+        >
+          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <FileText className="w-4 h-4 text-blue-600" />
           </div>
-          <p className="text-sm text-gray-500 truncate">
-            {isShared ? "Shared" : "You"} •{" "}
-            {new Date(doc.updatedAt || doc.createdAt).toLocaleDateString()}
-          </p>
-        </div>
 
-        <div className="flex items-center space-x-6 text-sm text-gray-500">
-          <div className="flex items-center space-x-1">
-            <Clock className="w-4 h-4" />
-            <span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2">
+              <h3 className="font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                {doc.title}
+              </h3>
+              {isShared && (
+                <Share2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              )}
+            </div>
+            <p className="text-sm text-gray-500 truncate">
+              {isShared ? "Shared" : "You"} •{" "}
               {new Date(doc.updatedAt || doc.createdAt).toLocaleDateString()}
-            </span>
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-6 text-sm text-gray-500">
+            <div className="flex items-center space-x-1">
+              <Clock className="w-4 h-4" />
+              <span>
+                {new Date(doc.updatedAt || doc.createdAt).toLocaleDateString()}
+              </span>
+            </div>
           </div>
         </div>
 
+        {/* Actions */}
         <div className="relative">
           <button
-            onClick={() =>
-              setShowDropdown(showDropdown === doc._id ? null : doc._id)
-            }
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDropdown(showDropdown === doc._id ? null : doc._id);
+            }}
             className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <MoreVertical className="w-4 h-4 text-gray-400" />
           </button>
-          {showDropdown === doc._id && (
-            <div className="absolute right-0 top-8 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-              <div className="py-2">
-                <button
-                  onClick={() => handleDocumentAction("open", doc._id)}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span>Open</span>
-                </button>
-                <button
-                  onClick={() => handleDocumentAction("edit", doc._id)}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  <span>Edit</span>
-                </button>
-                <button
-                  onClick={() => handleDocumentAction("share", doc._id)}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                >
-                  <Share2 className="w-4 h-4" />
-                  <span>Share</span>
-                </button>
-                <button
-                  onClick={() => handleDocumentAction("duplicate", doc._id)}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                >
-                  <Copy className="w-4 h-4" />
-                  <span>Duplicate</span>
-                </button>
-                <button
-                  onClick={() => handleDocumentAction("download", doc._id)}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download</span>
-                </button>
-                <hr className="my-2" />
-                <button
-                  onClick={() => handleDocumentAction("delete", doc._id)}
-                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Delete</span>
-                </button>
-              </div>
-            </div>
-          )}
+          <DropdownMenu doc={doc} isVisible={showDropdown === doc._id} />
         </div>
       </div>
     </div>
@@ -417,10 +457,13 @@ function Dashboard() {
                 ? "Try adjusting your search terms"
                 : "Create your first document to get started"}
             </p>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-blue-600/25 flex items-center space-x-2 mx-auto">
+            {/* <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-blue-600/25 flex items-center space-x-2 mx-auto">
               <Plus className="w-4 h-4" />
               <span>Create Document</span>
-            </button>
+            </button> */}
+            <div className="flex items-center justify-center">
+              <NewButton />
+            </div>
           </div>
         ) : (
           <div
@@ -458,14 +501,6 @@ function Dashboard() {
           </div>
         )}
       </div>
-
-      {/* Click outside to close dropdown */}
-      {showDropdown && (
-        <div
-          className="fixed inset-0 z-5"
-          onClick={() => setShowDropdown(null)}
-        />
-      )}
     </div>
   );
 }

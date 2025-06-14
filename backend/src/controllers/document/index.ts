@@ -9,10 +9,6 @@ export const CreateHandler = async (
 ) => {
   try {
     const { title, content } = req.body;
-    if (!title || !content) {
-      res.status(400).json({ message: "Title and content are required" });
-      return;
-    }
     const document = new Document({
       userId: req.user?.userId,
       title,
@@ -35,6 +31,70 @@ export const CreateHandler = async (
     return;
   } catch (error) {
     res.status(500).json({ message: "Error creating document" });
+    return;
+  }
+};
+
+export const UpdateHandler = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, content } = req.body;
+
+    if (!id) {
+      res.status(400).json({ message: "Document ID is required" });
+      return;
+    }
+
+    const document = await Document.findByIdAndUpdate(
+      id,
+      { title, content, updatedAt: new Date() },
+      { new: true }
+    );
+
+    if (!document) {
+      res.status(404).json({ message: "Document not found" });
+      return;
+    }
+
+    res.status(200).json({
+      message: `Document with ID ${id} updated successfully`,
+      data: document,
+    });
+    return;
+  } catch (error) {
+    res.status(500).json({ message: "Error updating document" });
+    return;
+  }
+};
+
+export const DeleteHandler = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).json({ message: "Document ID is required" });
+      return;
+    }
+
+    const document = await Document.findByIdAndDelete(id);
+
+    if (!document) {
+      res.status(404).json({ message: "Document not found" });
+      return;
+    }
+
+    await User.updateOne(
+      { _id: document.userId },
+      { $pull: { documents: document._id } }
+    );
+
+    res.status(200).json({
+      message: `Document with ID ${id} deleted successfully`,
+      data: document,
+    });
+    return;
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting document" });
     return;
   }
 };

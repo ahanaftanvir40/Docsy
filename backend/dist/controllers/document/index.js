@@ -12,17 +12,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GetAllHandler = exports.GetHandler = exports.CreateHandler = void 0;
+exports.GetAllHandler = exports.GetHandler = exports.DeleteHandler = exports.UpdateHandler = exports.CreateHandler = void 0;
 const document_1 = __importDefault(require("../../models/document"));
 const user_1 = __importDefault(require("../../models/user"));
 const CreateHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     try {
         const { title, content } = req.body;
-        if (!title || !content) {
-            res.status(400).json({ message: "Title and content are required" });
-            return;
-        }
         const document = new document_1.default({
             userId: (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId,
             title,
@@ -49,6 +45,56 @@ const CreateHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.CreateHandler = CreateHandler;
+const UpdateHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const { title, content } = req.body;
+        if (!id) {
+            res.status(400).json({ message: "Document ID is required" });
+            return;
+        }
+        const document = yield document_1.default.findByIdAndUpdate(id, { title, content, updatedAt: new Date() }, { new: true });
+        if (!document) {
+            res.status(404).json({ message: "Document not found" });
+            return;
+        }
+        res.status(200).json({
+            message: `Document with ID ${id} updated successfully`,
+            data: document,
+        });
+        return;
+    }
+    catch (error) {
+        res.status(500).json({ message: "Error updating document" });
+        return;
+    }
+});
+exports.UpdateHandler = UpdateHandler;
+const DeleteHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            res.status(400).json({ message: "Document ID is required" });
+            return;
+        }
+        const document = yield document_1.default.findByIdAndDelete(id);
+        if (!document) {
+            res.status(404).json({ message: "Document not found" });
+            return;
+        }
+        yield user_1.default.updateOne({ _id: document.userId }, { $pull: { documents: document._id } });
+        res.status(200).json({
+            message: `Document with ID ${id} deleted successfully`,
+            data: document,
+        });
+        return;
+    }
+    catch (error) {
+        res.status(500).json({ message: "Error deleting document" });
+        return;
+    }
+});
+exports.DeleteHandler = DeleteHandler;
 const GetHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
