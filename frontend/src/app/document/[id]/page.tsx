@@ -118,7 +118,7 @@ function SingleDoc() {
         if (editorRef.current && !updateMutation.isPending) {
           const editor = editorRef.current;
           const bookmark = editor.selection.getBookmark(2, true);
-          const content = editor.getContent({ format: "text" });
+          const content = editor.getContent();
 
           updateMutation.mutate(
             { title: title.trim(), content },
@@ -178,7 +178,7 @@ function SingleDoc() {
         const selection = editor.selection;
         const bookmark = selection.getBookmark(2, true);
 
-        editor.setContent(content, { format: "text" });
+        editor.setContent(content);
         setTimeout(() => {
           try {
             if (bookmark) {
@@ -213,7 +213,7 @@ function SingleDoc() {
     if (title.trim() && editorRef.current) {
       const editor = editorRef.current;
       const bookmark = editor.selection.getBookmark(2, true);
-      const content = editor.getContent({ format: "text" });
+      const content = editor.getContent();
 
       updateMutation.mutate(
         { title: title.trim(), content },
@@ -249,7 +249,7 @@ function SingleDoc() {
 
     saveTimerRef.current = setTimeout(() => {
       if (editorRef.current && !updateMutation.isPending) {
-        const content = editorRef.current.getContent({ format: "text" });
+        const content = editorRef.current.getContent();
         updateMutation.mutate({ title: newTitle.trim(), content });
       }
     }, 2000);
@@ -258,7 +258,7 @@ function SingleDoc() {
   const handleTitleBlur = () => {
     if (hasUnsavedChanges && title.trim()) {
       if (editorRef.current) {
-        const content = editorRef.current.getContent({ format: "text" });
+        const content = editorRef.current.getContent();
         updateMutation.mutate({ title: title.trim(), content });
       }
     }
