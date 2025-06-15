@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 interface User {
   _id: string;
@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  const router = useRouter();
   const isAuthenticated = !!user;
 
   useEffect(() => {
@@ -31,14 +31,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const checkAuthStatus = async () => {
+    setIsLoading(true);
     try {
       const token = localStorage.getItem("token");
 
       if (!token) {
+        setUser(null);
         setIsLoading(false);
         return;
       }
-      const response = await axios.get("http://localhost:8000/api/user/me", {
+      const BaseURL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const response = await axios.get(`${BaseURL}/api/user/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -63,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
-    redirect("/");
+    router.push("/SignIn");
   };
 
   return (

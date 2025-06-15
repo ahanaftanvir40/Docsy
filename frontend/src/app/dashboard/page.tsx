@@ -51,15 +51,13 @@ function Dashboard() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: AuthLoader } = useAuth();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/SignIn");
+    if (!isAuthenticated && !AuthLoader) {
+      router.replace("/SignIn");
     }
-  }, [isAuthenticated, router]);
-
-  console.log("User in Dashboard:", user);
+  }, [isAuthenticated, router, AuthLoader]);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["documents"],
@@ -134,6 +132,25 @@ function Dashboard() {
       router.push(`/document/${docId}`);
     }
   };
+
+  if (AuthLoader) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && !AuthLoader) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

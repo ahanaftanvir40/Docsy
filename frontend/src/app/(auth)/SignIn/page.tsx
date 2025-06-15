@@ -19,7 +19,11 @@ function SignIn() {
   const handleLogin = async (credentialResponse: CredentialResponse) => {
     const token = credentialResponse.credential;
     if (token) {
-      const res = await axios.post("http://localhost:8000/api/user/login", {
+      const BaseURL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      console.log("BaseURL:", BaseURL);
+
+      const res = await axios.post(`${BaseURL}/api/user/login`, {
         token,
       });
       if (res.status === 200) {

@@ -40,7 +40,7 @@ function SingleDoc() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const id = params.id as string;
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: AuthLoader } = useAuth();
   const editorRef = useRef<any>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -60,10 +60,10 @@ function SingleDoc() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated && !AuthLoader) {
       router.push("/SignIn");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, AuthLoader]);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["document", id],
@@ -267,6 +267,21 @@ function SingleDoc() {
       socket.disconnect();
     };
   }, [id, user?._id]);
+
+  if (AuthLoader) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   if (isLoading) {
     return (
