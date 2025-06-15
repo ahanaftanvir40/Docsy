@@ -130,7 +130,7 @@ function SignIn() {
                 onSuccess={handleLogin}
                 theme="outline"
                 size="large"
-                width="400"
+                width="20vw"
                 text="signin_with"
                 shape="rectangular"
               />
