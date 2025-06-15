@@ -30,37 +30,39 @@ function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors lg:hidden">
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
               <Link href="/dashboard" className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                   <FileText className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold text-gray-900">Docsy</span>
+                <span className="text-xl font-bold text-gray-900 hidden sm:inline">
+                  Docsy
+                </span>
               </Link>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {!pathname.startsWith("/document") && (
-                <div className="relative">
-                  <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search documents..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2 outline-none border text-gray-700 border-gray-200 rounded-lg  w-64"
-                  />
-                </div>
+                <>
+                  <div className="relative">
+                    <Search className="w-5 h-5 text-gray-400 absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-8 sm:pl-10 pr-2 sm:pr-4 py-2 text-sm sm:text-base outline-none border text-gray-700 border-gray-200 rounded-lg w-28 sm:w-48 md:w-64"
+                    />
+                  </div>
+                  <div className="flex-shrink-0">
+                    <NewButton />
+                  </div>
+                </>
               )}
-              {!pathname.startsWith("/document") && <NewButton />}
 
-              {/* User Menu */}
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="flex items-center p-1 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   {user?.avatar ? (
                     <Image
@@ -68,16 +70,14 @@ function Header() {
                       alt="User Avatar"
                       width={32}
                       height={32}
-                      className="w-8 h-8 rounded-full object-cover"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gray-300 rounded-full flex items-center justify-center">
                       <User className="w-4 h-4 text-gray-600" />
                     </div>
                   )}
                 </button>
-
-                {/* Dropdown Menu */}
                 {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
                     <div className="px-4 py-2 border-b border-gray-100">
@@ -106,7 +106,6 @@ function Header() {
     );
   }
 
-  // Unauthenticated header (for home/landing page)
   return (
     <div>
       <header className="border-b border-gray-100 bg-white backdrop-blur-sm sticky top-0 z-50">
