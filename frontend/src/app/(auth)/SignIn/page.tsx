@@ -88,7 +88,6 @@ function SignIn() {
           </div>
         </div>
 
-        {/* Floating Elements */}
         <div className="absolute top-20 right-20 w-24 h-24 bg-blue-100 rounded-full opacity-60 animate-pulse"></div>
         <div
           className="absolute bottom-32 right-12 w-16 h-16 bg-indigo-100 rounded-full opacity-40 animate-pulse"
@@ -100,9 +99,7 @@ function SignIn() {
         ></div>
       </div>
 
-      {/* Right Section - Sign In Form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-16 xl:px-20">
-        {/* Back to Home Link */}
         <div className="absolute top-6 left-6 lg:left-auto lg:right-6">
           <a
             href="/"
@@ -113,7 +110,6 @@ function SignIn() {
           </a>
         </div>
 
-        {/* Mobile Logo */}
         <div className="flex items-center space-x-2 mb-8 lg:hidden">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
             <FileText className="w-5 h-5 text-white" />
@@ -128,11 +124,18 @@ function SignIn() {
             </h2>
             <p className="text-gray-600">Continue your collaborative journey</p>
           </div>
-
-          {/* Google Sign In Button */}
-          <GoogleLogin onSuccess={handleLogin}></GoogleLogin>
-
-          {/* Divider */}
+          <div className="flex justify-center w-full my-6">
+            <div className="w-full">
+              <GoogleLogin
+                onSuccess={handleLogin}
+                theme="outline"
+                size="large"
+                width="400"
+                text="signin_with"
+                shape="rectangular"
+              />
+            </div>
+          </div>
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-200"></div>
@@ -143,8 +146,6 @@ function SignIn() {
               </span>
             </div>
           </div>
-
-          {/* Security Note */}
           <div className="text-center">
             <p className="text-sm text-gray-500 leading-relaxed">
               By signing in, you agree to our{" "}
@@ -163,8 +164,6 @@ function SignIn() {
               </a>
             </p>
           </div>
-
-          {/* Additional Info */}
           <div className="mt-12 p-6 bg-gray-50 rounded-xl">
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
