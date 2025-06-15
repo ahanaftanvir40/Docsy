@@ -6,7 +6,6 @@ import { deleteDocument } from "@/lib/api";
 
 import {
   FileText,
-  Filter,
   MoreVertical,
   Share2,
   Clock,
@@ -52,7 +51,13 @@ function Dashboard() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push("/SignIn");
+    }
+  }, [isAuthenticated, router]);
 
   console.log("User in Dashboard:", user);
 
@@ -329,7 +334,6 @@ function Dashboard() {
           <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
             <FileText className="w-4 h-4 text-blue-600" />
           </div>
-
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2">
               <h3 className="font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
@@ -344,7 +348,6 @@ function Dashboard() {
               {new Date(doc.updatedAt || doc.createdAt).toLocaleDateString()}
             </p>
           </div>
-
           <div className="flex items-center space-x-6 text-sm text-gray-500">
             <div className="flex items-center space-x-1">
               <Clock className="w-4 h-4" />
@@ -354,8 +357,6 @@ function Dashboard() {
             </div>
           </div>
         </div>
-
-        {/* Actions */}
         <div className="relative">
           <button
             onClick={(e) => {
@@ -375,7 +376,6 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             My Documents
@@ -384,8 +384,6 @@ function Dashboard() {
             Manage and collaborate on your documents
           </p>
         </div>
-
-        {/* Tabs and Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 space-y-4 sm:space-y-0">
           <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
             <button
@@ -411,10 +409,6 @@ function Dashboard() {
           </div>
 
           <div className="flex items-center space-x-3">
-            <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-              <Filter className="w-4 h-4 text-gray-600" />
-            </button>
-
             <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setViewMode("grid")}
@@ -439,8 +433,6 @@ function Dashboard() {
             </div>
           </div>
         </div>
-
-        {/* Documents Grid/List */}
         {filteredDocs.length === 0 ? (
           <div className="text-center py-12">
             <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -452,10 +444,6 @@ function Dashboard() {
                 ? "Try adjusting your search terms"
                 : "Create your first document to get started"}
             </p>
-            {/* <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-blue-600/25 flex items-center space-x-2 mx-auto">
-              <Plus className="w-4 h-4" />
-              <span>Create Document</span>
-            </button> */}
             <div className="flex items-center justify-center">
               <NewButton />
             </div>

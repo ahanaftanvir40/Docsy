@@ -35,13 +35,6 @@ export const LoginHandler = async (req: Request, res: Response) => {
       { expiresIn: "7d" }
     );
 
-    res.cookie("token", jwtToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-    });
-
-    //remove token in production
     res.status(200).json({
       message: "Login successful",
       token: jwtToken,

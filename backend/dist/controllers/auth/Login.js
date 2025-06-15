@@ -19,7 +19,6 @@ const user_1 = __importDefault(require("../../models/user"));
 const LoginHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { token } = req.body;
-        console.log("Received token:", token);
         const payload = yield (0, verify_token_1.verifyGoogleToken)(token);
         if (!payload) {
             res.status(401).json({ message: "Invalid token" });
@@ -38,12 +37,6 @@ const LoginHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             userId: user._id,
             email: user.email,
         }, process.env.JWT_SECRET, { expiresIn: "7d" });
-        res.cookie("token", jwtToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "strict",
-        });
-        //remove token in production
         res.status(200).json({
             message: "Login successful",
             token: jwtToken,
@@ -52,7 +45,6 @@ const LoginHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         return;
     }
     catch (error) {
-        console.log("Login error:", error);
         res.status(500).json({ message: "Authentication Failed" });
         return;
     }

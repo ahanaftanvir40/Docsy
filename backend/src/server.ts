@@ -32,7 +32,6 @@ const io = new Server(httpServer, {
   },
 });
 
-// Map: documentId -> Set of userIds
 const documentUsers = new Map<string, Set<string>>();
 
 io.on("connection", (socket) => {
@@ -61,7 +60,6 @@ io.on("connection", (socket) => {
       })
     );
     io.to(documentId).emit("connectedUsers", userInfos);
-    
   });
 
   socket.on("documentChange", (data) => {
@@ -70,8 +68,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log(`User ${currentUser} disconnected from document: ${currentDoc}`);
-    
     if (currentDoc && currentUser) {
       const usersSet = documentUsers.get(currentDoc);
       if (usersSet) {
@@ -82,7 +78,6 @@ io.on("connection", (socket) => {
           io.to(currentDoc).emit("onDisconnect", currentUser);
         }
       }
-      console.log(`User ${currentUser} left document: ${currentDoc}`);
     }
   });
 });

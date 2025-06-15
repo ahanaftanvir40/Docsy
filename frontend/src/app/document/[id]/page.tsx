@@ -40,7 +40,7 @@ function SingleDoc() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const id = params.id as string;
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const editorRef = useRef<any>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -58,6 +58,12 @@ function SingleDoc() {
     null
   );
   const [shareModalOpen, setShareModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push("/SignIn");
+    }
+  }, [isAuthenticated, router]);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["document", id],
@@ -463,10 +469,12 @@ function SingleDoc() {
 
       <div className="max-w-5xl  px-4 sm:px-6 lg:px-8 pb-8">
         <div className="flex items-center space-x-2 overflow-x-auto max-w-full md:max-w-[160px] sm:invisible">
-          <span className="text-sm text-gray-600 whitespace-nowrap">
-            {filteredConnectedUsers.length} user
-            {filteredConnectedUsers.length !== 1 ? "s" : ""} online
-          </span>
+          {filteredConnectedUsers.length > 0 && (
+            <span className="text-sm text-gray-600 whitespace-nowrap">
+              {filteredConnectedUsers.length} user
+              {filteredConnectedUsers.length !== 1 ? "s" : ""} online
+            </span>
+          )}
           <div className="flex -space-x-2 ">
             {filteredConnectedUsers.length > 0 &&
               filteredConnectedUsers.map((user, idx) => (

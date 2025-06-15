@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { FileText, Users, Edit3, ArrowLeft } from "lucide-react";
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
@@ -8,7 +8,14 @@ import axios from "axios";
 
 function SignIn() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [isAuthenticated, router]);
+
   const handleLogin = async (credentialResponse: CredentialResponse) => {
     const token = credentialResponse.credential;
     if (token) {

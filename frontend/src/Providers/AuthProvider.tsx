@@ -50,8 +50,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       localStorage.removeItem("token");
-      document.cookie =
-        "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     } finally {
       setIsLoading(false);
     }
@@ -59,13 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = (token: string) => {
     localStorage.setItem("token", token);
-    document.cookie = `token=${token}; path=/;`;
     checkAuthStatus();
   };
 
   const logout = () => {
     localStorage.removeItem("token");
-    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     setUser(null);
     redirect("/");
   };

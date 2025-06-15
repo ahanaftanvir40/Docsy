@@ -144,6 +144,14 @@ function Header() {
                 Sign In
               </Link>
             </nav>
+            <div className="md:hidden">
+              <Link
+                href={"/SignIn"}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-blue-600/25"
+              >
+                Sign In
+              </Link>
+            </div>
           </div>
         </div>
       </header>

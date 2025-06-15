@@ -25,10 +25,7 @@ const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const documentRoutes_1 = __importDefault(require("./routes/documentRoutes"));
 const user_1 = __importDefault(require("./models/user"));
 const app = (0, express_1.default)();
-app.use((0, cors_1.default)({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
-    credentials: true,
-}));
+app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use("/api/user", authRoutes_1.default);
@@ -42,7 +39,6 @@ const io = new socket_io_1.Server(httpServer, {
         methods: ["GET", "POST"],
     },
 });
-// Map: documentId -> Set of userIds
 const documentUsers = new Map();
 io.on("connection", (socket) => {
     let currentDoc = null;
@@ -69,7 +65,6 @@ io.on("connection", (socket) => {
         socket.to(documentId).emit("documentChange", content);
     });
     socket.on("disconnect", () => {
-        console.log(`User ${currentUser} disconnected from document: ${currentDoc}`);
         if (currentDoc && currentUser) {
             const usersSet = documentUsers.get(currentDoc);
             if (usersSet) {
@@ -81,7 +76,6 @@ io.on("connection", (socket) => {
                     io.to(currentDoc).emit("onDisconnect", currentUser);
                 }
             }
-            console.log(`User ${currentUser} left document: ${currentDoc}`);
         }
     });
 });
