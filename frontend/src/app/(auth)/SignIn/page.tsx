@@ -124,13 +124,12 @@ function SignIn() {
             </h2>
             <p className="text-gray-600">Continue your collaborative journey</p>
           </div>
-          <div className="flex justify-center w-full my-6">
-            <div className="w-full">
+          <div className="flex justify-center items-center w-full my-6">
+            <div className="w-full flex justify-center">
               <GoogleLogin
                 onSuccess={handleLogin}
                 theme="outline"
                 size="large"
-                width="20vw"
                 text="signin_with"
                 shape="rectangular"
               />
