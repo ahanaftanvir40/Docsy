@@ -10,6 +10,7 @@ connectDb();
 // routes import
 import authRoutes from "./routes/authRoutes";
 import documentRoutes from "./routes/documentRoutes";
+import User from "./models/user";
 
 const app = express();
 
@@ -38,7 +39,7 @@ io.on("connection", (socket) => {
   let currentDoc: string | null = null;
   let currentUser: string | null = null;
 
-  socket.on("join", (documentId, userId) => {
+  socket.on("join", async (documentId, userId) => {
     currentDoc = documentId;
     currentUser = userId;
     socket.join(documentId);
@@ -49,8 +50,18 @@ io.on("connection", (socket) => {
     documentUsers.get(documentId)!.add(userId);
 
     const users = Array.from(documentUsers.get(documentId)!);
-    io.to(documentId).emit("connectedUsers", users);
-    console.log(`User ${userId} joined document: ${documentId}`);
+
+    const userInfos = await Promise.all(
+      users.map(async (id) => {
+        const user = await User.findById(id).select("fullname avatar");
+
+        return user
+          ? { id: user._id, fullname: user.fullname, avatar: user.avatar }
+          : null;
+      })
+    );
+    io.to(documentId).emit("connectedUsers", userInfos);
+    
   });
 
   socket.on("documentChange", (data) => {
@@ -59,6 +70,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    console.log(`User ${currentUser} disconnected from document: ${currentDoc}`);
+    
     if (currentDoc && currentUser) {
       const usersSet = documentUsers.get(currentDoc);
       if (usersSet) {
@@ -66,8 +79,7 @@ io.on("connection", (socket) => {
         if (usersSet.size === 0) {
           documentUsers.delete(currentDoc);
         } else {
-          // Broadcast updated user list
-          io.to(currentDoc).emit("connectedUsers", Array.from(usersSet));
+          io.to(currentDoc).emit("onDisconnect", currentUser);
         }
       }
       console.log(`User ${currentUser} left document: ${currentDoc}`);

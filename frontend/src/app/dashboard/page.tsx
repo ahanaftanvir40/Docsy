@@ -122,8 +122,12 @@ function Dashboard() {
     }
   };
 
-  const handleCardClick = (docId: string) => {
-    router.push(`/document/${docId}`);
+  const handleCardClick = (docId: string, role?: string) => {
+    if (role) {
+      router.push(`/document/${docId}?role=${role}`);
+    } else {
+      router.push(`/document/${docId}`);
+    }
   };
 
   if (isLoading) {
@@ -163,8 +167,8 @@ function Dashboard() {
 
   const myDocs: IDocument[] = data?.data.documents || [];
   const sharedDocs: ISharedDocument[] = data?.data.sharedDocuments || [];
-  const currentDocs = activeTab === "my-docs" ? myDocs : sharedDocs;
 
+  const currentDocs = activeTab === "my-docs" ? myDocs : sharedDocs;
   const filteredDocs = currentDocs.filter((item) => {
     if (activeTab === "my-docs") {
       const doc = item as IDocument;
@@ -235,17 +239,18 @@ function Dashboard() {
   const DocumentCard = ({
     doc,
     isShared = false,
+    onClick,
   }: {
     doc: IDocument;
     isShared?: boolean;
+    onClick?: () => void;
   }) => (
     <div className="group bg-white border border-gray-200 rounded-xl hover:border-blue-200 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
       <div className="p-6">
-        {/* Header with actions */}
         <div className="flex items-start justify-between mb-4">
           <div
             className="flex items-center space-x-3 flex-1 cursor-pointer"
-            onClick={() => handleCardClick(doc._id)}
+            onClick={onClick ? onClick : () => handleCardClick(doc._id)}
           >
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
               <FileText className="w-5 h-5 text-blue-600" />
@@ -282,7 +287,7 @@ function Dashboard() {
         {/* Content */}
         <div
           className="cursor-pointer"
-          onClick={() => handleCardClick(doc._id)}
+          onClick={onClick ? onClick : () => handleCardClick(doc._id)}
         >
           <p className="text-sm text-gray-600 mb-4 line-clamp-2">
             {doc.content ? doc.content.slice(0, 100) + "..." : "No content"}
@@ -309,15 +314,17 @@ function Dashboard() {
   const DocumentListItem = ({
     doc,
     isShared = false,
+    onClick,
   }: {
     doc: IDocument;
     isShared?: boolean;
+    onClick?: () => void;
   }) => (
     <div className="group bg-white border border-gray-200 rounded-lg hover:border-blue-200 hover:shadow-md transition-all duration-200">
       <div className="p-4 flex items-center space-x-4">
         <div
           className="flex items-center space-x-4 flex-1 cursor-pointer"
-          onClick={() => handleCardClick(doc._id)}
+          onClick={onClick ? onClick : () => handleCardClick(doc._id)}
         >
           <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
             <FileText className="w-4 h-4 text-blue-600" />
@@ -476,12 +483,18 @@ function Dashboard() {
                     key={sharedDoc.document._id}
                     doc={sharedDoc.document}
                     isShared={true}
+                    onClick={() =>
+                      handleCardClick(sharedDoc.document._id, sharedDoc.role)
+                    }
                   />
                 ) : (
                   <DocumentListItem
                     key={sharedDoc.document._id}
                     doc={sharedDoc.document}
                     isShared={true}
+                    onClick={() =>
+                      handleCardClick(sharedDoc.document._id, sharedDoc.role)
+                    }
                   />
                 );
               }

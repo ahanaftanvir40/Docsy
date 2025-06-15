@@ -20,6 +20,10 @@ function Header() {
     return null;
   }
 
+  if (pathname.startsWith("/document")) {
+    return null;
+  }
+
   if (isAuthenticated) {
     return (
       <header className="bg-white border-b border-gray-200 sticky top-0 z-80">

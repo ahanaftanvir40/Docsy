@@ -8,7 +8,11 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 function auth(req, res, next) {
     var _a;
     try {
-        const token = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split(" ")[1];
+        let token = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split(" ")[1];
+        if (!token && req.cookies) {
+            token = req.cookies.token;
+        }
+        console.log("Token from headers or cookies:", token);
         if (!token) {
             res.status(401).json({ message: "Unauthorized" });
             return;
