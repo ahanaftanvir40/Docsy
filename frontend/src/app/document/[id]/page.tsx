@@ -41,16 +41,16 @@ function SingleDoc() {
   const queryClient = useQueryClient();
   const id = params.id as string;
   const { user, isAuthenticated, isLoading: AuthLoader } = useAuth();
+
+  // Refs
   const editorRef = useRef<any>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<Socket | null>(null);
-  const isReceivingUpdate = useRef(false);
-  const [connectedUsers, setConnectedUsers] = useState<IConnectedUser[]>([]);
-  const filteredConnectedUsers = connectedUsers.filter(
-    (connectedUser) => connectedUser.id !== user?._id
-  );
+  const isReceivingSocketUpdate = useRef(false);
 
+  // State
+  const [connectedUsers, setConnectedUsers] = useState<IConnectedUser[]>([]);
   const [title, setTitle] = useState("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -58,6 +58,10 @@ function SingleDoc() {
     null
   );
   const [shareModalOpen, setShareModalOpen] = useState(false);
+
+  const filteredConnectedUsers = connectedUsers.filter(
+    (connectedUser) => connectedUser.id !== user?._id
+  );
 
   useEffect(() => {
     if (!isAuthenticated && !AuthLoader) {
@@ -95,9 +99,6 @@ function SingleDoc() {
 
       queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
-    onError: (error) => {
-      // console.error("Failed to save document:", error);
-    },
   });
 
   useEffect(() => {
@@ -108,119 +109,52 @@ function SingleDoc() {
     }
   }, [data?.data?._id]);
 
-  useEffect(() => {
-    if (!hasUnsavedChanges || !data?.data) return;
-
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
+  const triggerAutoSave = () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
     }
+    if (hasUnsavedChanges && title.trim()) {
+      saveTimerRef.current = setTimeout(() => {
+        if (editorRef.current && !updateMutation.isPending) {
+          const editor = editorRef.current;
+          const bookmark = editor.selection.getBookmark(2, true);
+          const content = editor.getContent({ format: "text" });
 
-    autoSaveTimerRef.current = setTimeout(() => {
-      handleAutoSaveWithCursorPreservation();
-    }, 3000);
+          updateMutation.mutate(
+            { title: title.trim(), content },
+            {
+              onSuccess: () => {
+                setTimeout(() => {
+                  if (editorRef.current && bookmark) {
+                    try {
+                      editorRef.current.selection.moveToBookmark(bookmark);
+                      if (document.activeElement !== titleInputRef.current) {
+                        editorRef.current.focus();
+                      }
+                    } catch (error) {
+                      if (document.activeElement !== titleInputRef.current) {
+                        editorRef.current.focus();
+                      }
+                    }
+                  }
+                }, 10);
+              },
+            }
+          );
+        }
+      }, 2000);
+    }
+  };
 
+  useEffect(() => {
     return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
       }
     };
-  }, [title, hasUnsavedChanges, data?.data]);
+  }, []);
 
-  const handleAutoSaveWithCursorPreservation = () => {
-    if (title.trim() && editorRef.current && !updateMutation.isPending) {
-      const editor = editorRef.current;
-      const bookmark = editor.selection.getBookmark(2, true);
-
-      const content = editor.getContent({ format: "text" });
-      updateMutation.mutate(
-        { title: title.trim(), content },
-        {
-          onSuccess: () => {
-            setTimeout(() => {
-              if (editorRef.current && bookmark) {
-                try {
-                  editorRef.current.selection.moveToBookmark(bookmark);
-                  if (document.activeElement !== titleInputRef.current) {
-                    editorRef.current.focus();
-                  }
-                } catch (e) {
-                  if (document.activeElement !== titleInputRef.current) {
-                    editorRef.current.focus();
-                  }
-                }
-              }
-            }, 0);
-          },
-        }
-      );
-    }
-  };
-
-  const handleSaveWithCursorPreservation = () => {
-    if (title.trim() && editorRef.current) {
-      const editor = editorRef.current;
-      const bookmark = editor.selection.getBookmark(2, true);
-
-      const content = editor.getContent({ format: "text" });
-      updateMutation.mutate(
-        { title: title.trim(), content },
-        {
-          onSuccess: () => {
-            setTimeout(() => {
-              if (editorRef.current && bookmark) {
-                try {
-                  editorRef.current.selection.moveToBookmark(bookmark);
-                  if (document.activeElement !== titleInputRef.current) {
-                    editorRef.current.focus();
-                  }
-                } catch (e) {
-                  if (document.activeElement !== titleInputRef.current) {
-                    editorRef.current.focus();
-                  }
-                }
-              }
-            }, 0);
-          },
-        }
-      );
-    }
-  };
-
-  const handleSave = () => {
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-
-    handleSaveWithCursorPreservation();
-  };
-
-  const handleTitleChange = (newTitle: string) => {
-    setTitle(newTitle);
-    setHasUnsavedChanges(true);
-  };
-
-  const handleTitleBlur = () => {
-    if (hasUnsavedChanges && title.trim()) {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-      handleAutoSaveWithCursorPreservation();
-    }
-  };
-
-  const handleEditorChange = (content: string) => {
-    setHasUnsavedChanges(true);
-    if (socketRef.current && !isReceivingUpdate.current) {
-      socketRef.current.emit("documentChange", { documentId: id, content });
-    }
-  };
-  const handlerShare = () => {
-    if (id) {
-      setSelectedDocument(data.data);
-      setShareModalOpen(true);
-    }
-  };
-
+  // Socket
   useEffect(() => {
     if (!id || !user?._id) return;
 
@@ -238,22 +172,24 @@ function SingleDoc() {
     });
 
     socket.on("documentChange", (content: string) => {
-      if (editorRef.current) {
+      if (editorRef.current && !isReceivingSocketUpdate.current) {
+        isReceivingSocketUpdate.current = true;
         const editor = editorRef.current;
-        const bookmark = editor.selection.getBookmark(2, true);
+        const selection = editor.selection;
+        const bookmark = selection.getBookmark(2, true);
 
-        isReceivingUpdate.current = true;
         editor.setContent(content, { format: "text" });
-
         setTimeout(() => {
           try {
-            editor.selection.moveToBookmark(bookmark);
-            editor.focus();
+            if (bookmark) {
+              selection.moveToBookmark(bookmark);
+            }
           } catch (error) {
-            editor.focus();
+            editor.selection.select(editor.getBody(), true);
+            editor.selection.collapseToEnd();
           }
-          isReceivingUpdate.current = false;
-        }, 0);
+          isReceivingSocketUpdate.current = false;
+        }, 10);
       }
     });
 
@@ -267,6 +203,83 @@ function SingleDoc() {
       socket.disconnect();
     };
   }, [id, user?._id]);
+
+  // Handlers
+  const handleSave = () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    if (title.trim() && editorRef.current) {
+      const editor = editorRef.current;
+      const bookmark = editor.selection.getBookmark(2, true);
+      const content = editor.getContent({ format: "text" });
+
+      updateMutation.mutate(
+        { title: title.trim(), content },
+        {
+          onSuccess: () => {
+            setTimeout(() => {
+              if (editorRef.current && bookmark) {
+                try {
+                  editorRef.current.selection.moveToBookmark(bookmark);
+                  if (document.activeElement !== titleInputRef.current) {
+                    editorRef.current.focus();
+                  }
+                } catch (error) {
+                  if (document.activeElement !== titleInputRef.current) {
+                    editorRef.current.focus();
+                  }
+                }
+              }
+            }, 10);
+          },
+        }
+      );
+    }
+  };
+
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    setHasUnsavedChanges(true);
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(() => {
+      if (editorRef.current && !updateMutation.isPending) {
+        const content = editorRef.current.getContent({ format: "text" });
+        updateMutation.mutate({ title: newTitle.trim(), content });
+      }
+    }, 2000);
+  };
+
+  const handleTitleBlur = () => {
+    if (hasUnsavedChanges && title.trim()) {
+      if (editorRef.current) {
+        const content = editorRef.current.getContent({ format: "text" });
+        updateMutation.mutate({ title: title.trim(), content });
+      }
+    }
+  };
+
+  const handleEditorChange = (content: string) => {
+    if (isReceivingSocketUpdate.current) return;
+
+    setHasUnsavedChanges(true);
+    if (socketRef.current) {
+      socketRef.current.emit("documentChange", { documentId: id, content });
+    }
+    triggerAutoSave();
+  };
+
+  const handleShare = () => {
+    if (id && data?.data) {
+      setSelectedDocument(data.data);
+      setShareModalOpen(true);
+    }
+  };
 
   if (AuthLoader) {
     return (
@@ -346,9 +359,9 @@ function SingleDoc() {
                 onBlur={handleTitleBlur}
                 className="text-lg font-semibold text-gray-900 bg-transparent border-none outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 truncate min-w-0"
                 placeholder="Document title..."
+                disabled={isViewer}
               />
             </div>
-
             <div className="flex items-center space-x-2 text-sm text-gray-500 justify-center min-w-0 mt-2 md:mt-0">
               {updateMutation.isPending && (
                 <>
@@ -367,7 +380,7 @@ function SingleDoc() {
                   <Check className="w-4 h-4 text-green-500" />
                   <span>
                     Saved{" "}
-                    <span className="invisible sm:visible">
+                    <span className="hidden sm:inline">
                       {lastSaved.toLocaleTimeString()}
                     </span>
                   </span>
@@ -376,27 +389,28 @@ function SingleDoc() {
             </div>
 
             <div className="flex flex-1 items-center justify-end space-x-2 min-w-0 mt-2 md:mt-0">
-              <button
-                onClick={handleSave}
-                disabled={updateMutation.isPending || !hasUnsavedChanges}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
-              >
-                {updateMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                <span>Save</span>
-              </button>
+              {!isViewer && (
+                <button
+                  onClick={handleSave}
+                  disabled={updateMutation.isPending || !hasUnsavedChanges}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+                >
+                  {updateMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  <span>Save</span>
+                </button>
+              )}
 
               <button
-                onClick={handlerShare}
+                onClick={handleShare}
                 className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <Share2 className="w-5 h-5 text-gray-600" />
               </button>
-
-              <div className="flex items-center space-x-2 overflow-x-auto max-w-full md:max-w-[160px] invisible sm:visible">
+              <div className="hidden sm:flex items-center space-x-2 max-w-[200px]">
                 {filteredConnectedUsers.length > 0 && (
                   <span className="text-sm text-gray-600 whitespace-nowrap">
                     {filteredConnectedUsers.length} user
@@ -404,29 +418,21 @@ function SingleDoc() {
                   </span>
                 )}
                 <div className="flex -space-x-2">
-                  {filteredConnectedUsers.length > 0 &&
-                    filteredConnectedUsers.map((user, idx) => (
-                      <div
-                        key={user.id}
-                        className="flex flex-col justify-center items-center"
-                      >
-                        <Image
-                          src={user.avatar || "/default-avatar.png"}
-                          alt={"User Avatar"}
-                          className="w-8 h-8 rounded-full border-2 border-white"
-                          style={{
-                            zIndex: filteredConnectedUsers.length - idx,
-                          }}
-                          width={32}
-                          height={32}
-                        />
-                        <div className="user-name">
-                          <h1 className="text-xs text-gray-500 truncate max-w-[64px]">
-                            {user.fullname}
-                          </h1>
-                        </div>
+                  {filteredConnectedUsers.map((user, idx) => (
+                    <div key={user.id} className="relative group">
+                      <Image
+                        src={user.avatar || "/default-avatar.png"}
+                        alt={user.fullname}
+                        className="w-8 h-8 rounded-full border-2 border-white"
+                        style={{ zIndex: filteredConnectedUsers.length - idx }}
+                        width={32}
+                        height={32}
+                      />
+                      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                        {user.fullname}
                       </div>
-                    ))}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -438,7 +444,7 @@ function SingleDoc() {
       <div className="max-w-5xl sm:max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 sm:py-8 py-3">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <Editor
-            apiKey={`${process.env.NEXT_PUBLIC_TINYMCE_API_KEY}`}
+            apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
             onInit={(evt, editor) => (editorRef.current = editor)}
             initialValue={data?.data?.content || ""}
             key={`${id}-${data?.data?._id || "loading"}`}
@@ -461,7 +467,6 @@ function SingleDoc() {
                 "insertdatetime",
                 "media",
                 "table",
-                "code",
                 "help",
                 "wordcount",
               ],
@@ -482,38 +487,30 @@ function SingleDoc() {
         </div>
       </div>
 
-      <div className="max-w-5xl  px-4 sm:px-6 lg:px-8 pb-8">
-        <div className="flex items-center space-x-2 overflow-x-auto max-w-full md:max-w-[160px] sm:invisible">
+      <div className="sm:hidden max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        <div className="flex items-center space-x-2">
           {filteredConnectedUsers.length > 0 && (
             <span className="text-sm text-gray-600 whitespace-nowrap">
               {filteredConnectedUsers.length} user
               {filteredConnectedUsers.length !== 1 ? "s" : ""} online
             </span>
           )}
-          <div className="flex -space-x-2 ">
-            {filteredConnectedUsers.length > 0 &&
-              filteredConnectedUsers.map((user, idx) => (
-                <div
-                  key={user.id}
-                  className="flex flex-col justify-center items-center"
-                >
-                  <Image
-                    src={user.avatar || "/default-avatar.png"}
-                    alt={"User Avatar"}
-                    className="w-8 h-8 rounded-full border-2 border-white"
-                    style={{
-                      zIndex: filteredConnectedUsers.length - idx,
-                    }}
-                    width={32}
-                    height={32}
-                  />
-                  <div className="user-name">
-                    <h1 className="text-xs text-gray-500 truncate max-w-[64px]">
-                      {user.fullname}
-                    </h1>
-                  </div>
-                </div>
-              ))}
+          <div className="flex -space-x-2">
+            {filteredConnectedUsers.map((user, idx) => (
+              <div key={user.id} className="flex flex-col items-center">
+                <Image
+                  src={user.avatar || "/default-avatar.png"}
+                  alt={user.fullname}
+                  className="w-8 h-8 rounded-full border-2 border-white"
+                  style={{ zIndex: filteredConnectedUsers.length - idx }}
+                  width={32}
+                  height={32}
+                />
+                <span className="text-xs text-gray-500 truncate max-w-[64px] mt-1">
+                  {user.fullname}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

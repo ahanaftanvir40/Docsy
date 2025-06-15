@@ -279,7 +279,9 @@ function Dashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
-                {doc.title}
+                {doc.title
+                  ? doc.title.slice(0, 30) + "..."
+                  : "Untitled Document"}
               </h3>
               <p className="text-sm text-gray-500 mt-1">
                 {isShared ? "Shared" : "You"} •{" "}
