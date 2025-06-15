@@ -31,7 +31,7 @@ function Home() {
               edit, and share documents with your team in a beautiful,
               distraction-free environment.
             </p>
-            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link href={"/SignIn"}>
                 <button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:shadow-xl hover:shadow-blue-600/25 hover:-translate-y-0.5 flex items-center justify-center space-x-2">
                   <span>Start Writing</span>
@@ -156,7 +156,7 @@ function Home() {
             Join thousands of teams already using Docsy to create amazing
             content together.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link href={"/SignIn"}>
               <button className="bg-white hover:bg-gray-50 text-blue-600 px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:shadow-2xl hover:-translate-y-0.5 flex items-center justify-center space-x-2">
                 <span>Get Started Free</span>
