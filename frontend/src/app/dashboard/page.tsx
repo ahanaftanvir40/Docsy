@@ -133,6 +133,13 @@ function Dashboard() {
     }
   };
 
+  const stripHtmlTags = (html: string) => {
+    if (!html) return "";
+    const tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
   if (AuthLoader) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -314,7 +321,10 @@ function Dashboard() {
           onClick={onClick ? onClick : () => handleCardClick(doc._id)}
         >
           <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-            {doc.content ? doc.content.slice(0, 100) + "..." : "No content"}
+            {doc.content
+              ? stripHtmlTags(doc.content).slice(0, 100) +
+                (stripHtmlTags(doc.content).length > 100 ? "..." : "")
+              : "No content"}
           </p>
 
           <div className="flex items-center justify-between">
